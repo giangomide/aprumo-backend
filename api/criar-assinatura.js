@@ -7,7 +7,7 @@ import { createClient } from '@supabase/supabase-js';
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
 const PLANOS = {
-  mensal: { reason: 'Aprumo Plus - Mensal', frequency: 1, frequency_type: 'months', transaction_amount: 30.00 },
+  mensal: { reason: 'Aprumo Plus - Mensal', frequency: 1, frequency_type: 'months', transaction_amount: 1.00 },
   anual:  { reason: 'Aprumo Plus - Anual',  frequency: 12, frequency_type: 'months', transaction_amount: 239.90 },
 };
 
