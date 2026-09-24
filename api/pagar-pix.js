@@ -5,7 +5,7 @@
 import crypto from 'crypto';
 
 const PLANOS_PIX = {
-  mensal: { descricao: 'Aprumo Plus - Mensal (Pix)', valor: 39.00 }, // TESTE: voltar para 30.00 depois
+  mensal: { descricao: 'Aprumo Plus - Mensal (Pix)', valor: 30.00 }, // TESTE: voltar para 30.00 depois
   anual:  { descricao: 'Aprumo Plus - Anual (Pix)',  valor: 239.90 },
 };
 
