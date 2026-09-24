@@ -1,7 +1,7 @@
 // GET /api/status?email=...
 // Diz para o app se o usuário tem Plus ativo agora.
-// Cartão: vale enquanto a assinatura estiver ativa (premium = true).
-// Pix: vale até a data em premium_ate. Depois disso, o Plus some sozinho.
+// Cartão ativo: Plus liberado.
+// Pix ou cartão cancelado: Plus vale até a data em premium_ate.
 
 import { createClient } from '@supabase/supabase-js';
 
@@ -27,12 +27,11 @@ export default async function handler(req, res) {
     if (error) throw error;
     if (!data) return res.status(200).json({ premium: false, plano: null });
 
-    let premium = !!data.premium;
+    const agora = new Date();
+    const dentroDoPrazo = !!data.premium_ate && new Date(data.premium_ate) > agora;
+    const cartaoAtivo = data.status === 'authorized';
 
-    // Pix: se já passou da data de validade, o Plus acabou
-    if (data.premium_ate && new Date(data.premium_ate) <= new Date()) {
-      premium = false;
-    }
+    const premium = cartaoAtivo || dentroDoPrazo;
 
     return res.status(200).json({
       premium,
