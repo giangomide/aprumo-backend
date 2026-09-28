@@ -1,6 +1,6 @@
 // POST /api/criar-assinatura
-// Recebe { email, plano } e cria uma assinatura recorrente no Mercado Pago.
-// Devolve a URL de checkout para o usuário pagar (cartão ou Pix).
+// Recebe { plano } de quem está logado e cria uma assinatura recorrente (cartão) no Mercado Pago.
+// Devolve a URL de checkout.
 
 import { createClient } from '@supabase/supabase-js';
 
@@ -11,18 +11,31 @@ const PLANOS = {
   anual:  { reason: 'Aprumo Plus - Anual',  frequency: 12, frequency_type: 'months', transaction_amount: 239.90 },
 };
 
+// Confere quem está pedindo: o app manda o "token" do login e o Supabase diz de quem ele é.
+async function usuarioLogado(req) {
+  const h = req.headers.authorization || req.headers.Authorization || '';
+  const token = h.startsWith('Bearer ') ? h.slice(7) : null;
+  if (!token) return null;
+  const { data, error } = await supabase.auth.getUser(token);
+  if (error || !data || !data.user || !data.user.email) return null;
+  return data.user;
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ erro: 'method_not_allowed' });
 
-  const { email, plano } = req.body || {};
-  if (!email || !PLANOS[plano]) {
-    return res.status(400).json({ erro: 'dados_invalidos', mensagem: 'Informe email e plano (mensal ou anual).' });
-  }
+  const user = await usuarioLogado(req);
+  if (!user) return res.status(401).json({ erro: 'nao_logado', mensagem: 'Entre na sua conta para assinar.' });
+  const email = user.email.toLowerCase();
 
+  const { plano } = req.body || {};
+  if (!PLANOS[plano]) {
+    return res.status(400).json({ erro: 'dados_invalidos', mensagem: 'Escolha o plano mensal ou anual.' });
+  }
   const p = PLANOS[plano];
 
   try {
@@ -41,25 +54,24 @@ export default async function handler(req, res) {
           currency_id: 'BRL',
         },
         payer_email: email,
-        back_url: process.env.APP_URL || 'https://seu-app.vercel.app',
+        back_url: process.env.APP_URL || 'https://aprumo-app-hazel.vercel.app',
         status: 'pending',
       }),
     });
 
     const data = await resp.json();
-
     if (!resp.ok) {
       console.error('Erro Mercado Pago:', data);
       return res.status(500).json({ erro: 'mp_error', detalhe: data });
     }
 
-    await supabase.from('subscribers').upsert({
-      email,
-      plano,
-      mp_preapproval_id: data.id,
-      status: 'pending',
-      premium: false,
-    });
+    // guarda o vínculo da assinatura sem mexer em quem já tem Plus
+    const { data: atual } = await supabase.from('subscribers').select('email').eq('email', email).maybeSingle();
+    if (atual) {
+      await supabase.from('subscribers').update({ plano, mp_preapproval_id: data.id, updated_at: new Date().toISOString() }).eq('email', email);
+    } else {
+      await supabase.from('subscribers').insert({ email, plano, mp_preapproval_id: data.id, status: 'pending', premium: false });
+    }
 
     return res.status(200).json({ checkout_url: data.init_point });
   } catch (e) {

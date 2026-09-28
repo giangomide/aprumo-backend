@@ -1,5 +1,5 @@
 // POST /api/chat
-// Recebe { email, mensagens: [{ role, content }], hoje } e conversa com a IA (Claude Haiku).
+// Recebe { mensagens: [{ role, content }], hoje } de quem está logado e conversa com a IA (Claude Haiku).
 // Só funciona para quem é Aprumo Plus, o que protege o crédito da API.
 // Devolve { texto, acoes: [{ tipo, dados }] } para o app mostrar os cartões de confirmação.
 
@@ -69,6 +69,17 @@ function regras(hoje) {
   ].join(' ');
 }
 
+// Confere quem está pedindo: o app manda o "token" do login e o Supabase diz de quem ele é.
+async function usuarioLogado(req) {
+  const h = req.headers.authorization || req.headers.Authorization || '';
+  const token = h.startsWith('Bearer ') ? h.slice(7) : null;
+  if (!token) return null;
+  const { data, error } = await supabase.auth.getUser(token);
+  if (error || !data || !data.user || !data.user.email) return null;
+  return data.user;
+}
+
+
 async function ehPlus(email) {
   const { data } = await supabase
     .from('subscribers')
@@ -98,15 +109,17 @@ function organizar(mensagens) {
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ erro: 'method_not_allowed' });
 
-  const { email, mensagens, hoje } = req.body || {};
-  if (!email || !Array.isArray(mensagens)) return res.status(400).json({ erro: 'dados_invalidos' });
+  const { mensagens, hoje } = req.body || {};
+  if (!Array.isArray(mensagens)) return res.status(400).json({ erro: 'dados_invalidos' });
 
   try {
-    if (!(await ehPlus(email))) return res.status(403).json({ erro: 'requer_plus' });
+    const user = await usuarioLogado(req);
+    if (!user) return res.status(401).json({ erro: 'nao_logado' });
+    if (!(await ehPlus(user.email.toLowerCase()))) return res.status(403).json({ erro: 'requer_plus' });
 
     const historico = organizar(mensagens);
     if (!historico.length) return res.status(400).json({ erro: 'sem_mensagem' });
