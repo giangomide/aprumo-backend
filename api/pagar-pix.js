@@ -8,8 +8,8 @@ import { createClient } from '@supabase/supabase-js';
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
 const PLANOS_PIX = {
-  mensal: { descricao: 'Aprumo Plus - Mensal (Pix)', valor: 30.00 },
-  anual:  { descricao: 'Aprumo Plus - Anual (Pix)',  valor: 239.90 },
+  mensal: { descricao: 'Aprumo Plus - Mensal (Pix)', valor: 19.99 },
+  anual:  { descricao: 'Aprumo Plus - Anual (Pix)',  valor: 179.90 },
 };
 
 // Confere quem está pedindo: o app manda o "token" do login e o Supabase diz de quem ele é.
