@@ -1,6 +1,6 @@
 // POST /api/chat
 // Recebe { mensagens: [{ role, content }], hoje } de quem está logado e conversa com a IA (Claude Haiku).
-// Só funciona para quem é Aprumo Plus, o que protege o crédito da API.
+// Só funciona para quem é Avanzi Plus, o que protege o crédito da API.
 // Devolve { texto, acoes: [{ tipo, dados }] } para o app mostrar os cartões de confirmação.
 
 import { createClient } from '@supabase/supabase-js';
@@ -55,7 +55,7 @@ const TOOLS = [
 
 function regras(hoje) {
   return [
-    'Você é o organizador particular do Aprumo, um app brasileiro de finanças pessoais para quem está começando do zero.',
+    'Você é o organizador particular do Avanzi, um app brasileiro de finanças pessoais para quem está começando do zero.',
     'Hoje é ' + hoje + ' (formato AAAA-MM-DD).',
     'Categorias possíveis (use exatamente um destes ids): ' + CATS.join(', ') + '. Na dúvida, use "outros".',
     'Quando o usuário contar um gasto ou recebimento com valor, chame registrar_lancamento. Se ele citar vários na mesma mensagem, chame uma vez para cada.',
